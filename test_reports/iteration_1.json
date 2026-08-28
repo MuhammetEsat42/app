@@ -1,0 +1,64 @@
+{
+  "summary": "Full backend + frontend E2E testing of GUI Blox. Created pytest suite (36 tests, 100% pass) covering health/security headers, register + anti-fraud (disposable email 400, IP signup cap 429, fingerprint reuse 409), mock email verification (5 credits), login/401, JWT refresh rotation + old-token revocation, logout, Redis rate limit (exactly 5/min + Retry-After), API keys (one-time full_key reveal, no secret leak in list, revoke, regenerate invalidates old key, max-5 enforced), bridge auth (401 missing/malformed/revoked, 403 IP allowlist, 200 for allowlisted IP, poll/result/context/log), AI Workspace SSE (real Claude Sonnet 4.6: streamed tokens + 3 actions, commands queued and delivered to bridge poll, exact credit deduction 182->165), estimate, credit hard-stop, dashboard endpoints (projects CRUD, history, ledger, billing packages, audit, sessions, revoke-all) and unverified-user 403 gating. Frontend: landing -> /register, captcha gating, register->mock code->verify->/workspace with 5 credits, login with seeded user, workspace prompt run with streaming plan + Monaco Luau preview + WS log stream, API Keys create/reveal/copy/revoke, all 8 sidebar routes render. Found no backend defects; found 1 high-priority responsive-nav bug and several UX/design issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/keys", "issue": "Per-plan key cap in config.PLANS (free: max_keys=2) is not enforced; apikeys.py always uses global MAX_ACTIVE_KEYS=5, so free-plan users can create 5 keys. Same for PLANS['free'].ip_allowlist=False which is never checked."},
+      {"endpoint": "POST /api/workspace/prompt (ai_agent.run_agent)", "issue": "Credits are deducted with a single $inc AFTER the SSE generator finishes. If the client disconnects mid-stream (browser close / navigation), the generator is cancelled after commands were already queued -> commands executed with no credit charge."},
+      {"endpoint": "POST /api/workspace/prompt (ai_agent.run_agent)", "issue": "Balance check uses a snapshot (`credits = user['credits']`) taken at request start; two concurrent prompts can each spend the full balance, driving credits negative. Needs an atomic conditional $inc per queued action."},
+      {"endpoint": "supervisor:redis", "issue": "Supervisor program `redis` is in FATAL state (Exited too quickly). A redis-server is currently reachable (redis-cli PONG) so rate limiting works, but if that ad-hoc process dies Redis-backed rate limiting/limits will 500. Env-level, worth confirming /etc/supervisor/conf.d/redis.conf."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DashboardLayout", "issue": "No navigation on <1024px viewports: sidebar is `hidden lg:flex` and there is no hamburger/drawer. At 768px and 390px zero nav links are visible and 'Log out' is unreachable, so mobile/tablet users are trapped on the current page.", "selector": "[data-testid^=\"nav-\"] (all is_visible()==False at 768/390px)", "priority": "HIGH"},
+      {"component": "Toaster / DashboardLayout header", "issue": "Toasts render in the top-right over the header pills, fully covering credit-balance and studio-status-pill right after every action (login, plan queued, key revoked).", "selector": "[data-testid=\"credit-balance\"], [data-testid=\"studio-status-pill\"]", "priority": "MEDIUM"},
+      {"component": "Workspace ai-plan-stream", "issue": "Model output is rendered as raw markdown: literal '**bold**', '```lua' fences and pipe tables ('| Asset | Location | Role |') are shown as plain text.", "selector": "[data-testid=\"ai-plan-stream\"]", "priority": "MEDIUM"},
+      {"component": "ApiKeys keys-list", "issue": "Revoked keys accumulate forever with no delete/filter/collapse (13 rows after testing, mostly REVOKED) - list becomes unusable.", "selector": "[data-testid=\"keys-list\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Credit hard stop (low-credit user)", "issue": "With 5 credits and an 8-credit write_script the backend emits hard_stop and queues 0 actions, but the UI only shows a transient toast; the streamed plan text still narrates success ('Done. Here's a breakdown of the three helpers inside ReplicatedStorage.MathHelpers') while credits stay 5 and no command is queued. Users believe work was executed. Needs a persistent inline banner + 'Buy credits' CTA, and the tool-result rejection should stop the model claiming completion.", "affected_selectors": ["[data-testid=\"ai-plan-stream\"]", "[data-testid=\"credit-balance\"]"]},
+      {"flow": "Cost preview vs actual spend", "issue": "credit-estimate showed '~9 credits' for the demo Beacon prompt but the run cost 17 credits (1 + 8 + 8); terrain prompt showed '~21'. The heuristic under-counts multi-script plans, so the pre-run cost preview misleads users.", "affected_selectors": ["[data-testid=\"credit-estimate\"]"]},
+      {"flow": "WS log stream", "issue": "Console warning 'WebSocket is closed before the connection is established' on route change/unmount (missing readyState guard in useLogStream cleanup). Cosmetic - stream itself shows 'WS live' and receives events.", "affected_selectors": ["[data-testid=\"log-stream\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Workspace (desktop 1920)", "issues": ["Right column (Luau Preview / Toolbox / Log stream) leaves large empty vertical space when idle while the left plan column scrolls very long", "Action cards keep an infinite spinner while Studio is offline with no 'waiting for bridge' label"]},
+      {"screen": "Dashboard (768px / 390px)", "issues": ["Sidebar hidden with no replacement nav or logout", "Header only shows the logo, wasting the full header width"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/cleanup_test_data.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Add a mobile/tablet nav (hamburger + Sheet drawer) in DashboardLayout with logout, since sidebar is lg-only",
+    "Move/offset toasts so they do not cover credit-balance and studio-status-pill",
+    "Render the AI plan stream as markdown (react-markdown) instead of raw text",
+    "Show a persistent inline 'insufficient credits' state (with Buy credits CTA) on hard_stop and prevent the model from narrating success for rejected tool calls",
+    "Make the credit estimate consistent with real action pricing (or label it clearly as a lower bound)",
+    "Deduct credits atomically per queued action inside run_agent (guards client-disconnect leak and concurrent-prompt overspend)",
+    "Enforce per-plan key cap / ip_allowlist entitlements from config.PLANS instead of the global MAX_ACTIVE_KEYS",
+    "Investigate supervisor redis program in FATAL state"
+  ],
+  "critical_code_review_comments": [
+    "ai_agent.run_agent: credits are $inc'ed only after the generator completes and the balance is a request-start snapshot -> credit leak on client disconnect and race on concurrent prompts. Use `users.update_one({'id':id,'credits':{'$gte':cost}}, {'$inc':{'credits':-cost}})` per action and hard-stop when matched_count==0.",
+    "routers/apikeys.py ignores PLANS[user.plan]['max_keys'] and ['ip_allowlist'] - plan entitlements defined in config are dead code.",
+    "ai_agent._queue_command always stores api_key_id=None even though the Command model carries it; bridge attribution/per-key auditing is lost.",
+    "routers/workspace.py get_bridge_state duplicates the 8s freshness logic that bridge.py writes - extract a shared helper; also `from security import now_utc` there is unused.",
+    "Frontend useLogStream should guard ws.close() on readyState CONNECTING to remove the console WebSocket warning."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/cleanup_test_data.py"
+  ],
+  "success_rate": {"backend": "100% (36/36 pytest)", "frontend": "~85% (all core flows pass; 1 high responsive-nav bug + 4 UX issues)"},
+  "seed_data_creation": "Created and then deleted QA users (test_*@example.com), TEST_* API keys and one TEST_project via /app/backend/tests/cleanup_test_data.py. Seeded user test@guiblox.com retained; its credits are now 165 (spent 35 on two real Claude runs) and its active sessions were revoked once by the revoke-all test (re-login works).",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "test@guiblox.com / Test1234! (from /app/memory/test_credentials.md) - valid, Studio plan, 165 credits remaining",
+  "context_for_next_testing_agent": "Backend suite lives at /app/backend/tests/backend_test.py + conftest.py; run with `cd /app/backend && python -m pytest tests/ -c pytest.ini -q`. IMPORTANT: the backend trusts the first X-Forwarded-For entry for client_ip, so conftest sends a random synthetic IP per session to dodge the 5/min auth limit, 60/min global limit and the 2-signups-per-IP/24h cap - keep that pattern. SSE prompt tests make REAL Claude calls (~30-60s each) and burn seeded-user credits (~17/run); top up via mongo if credits get low. Frontend flows verified: landing->register->verify->workspace, login, prompt run with streaming/Monaco/WS, API keys reveal+revoke, all 8 nav routes. Not yet retested: mobile nav fix, markdown rendering, hard_stop banner, atomic credit deduction. Use tests/cleanup_test_data.py after runs.",
+  "rca_of_the_issue": "Responsive nav: DashboardLayout.jsx line 43 renders the sidebar as `hidden lg:flex` and line 86 renders only a logo for `lg:hidden`; no drawer/hamburger exists, so below 1024px there are zero reachable nav links or logout. Hard-stop UX: ai_agent yields a `hard_stop` SSE event which Workspace.jsx line 98 maps to a transient toast only, while the model (whose tool call was rejected with status=rejected) continues to narrate the change as completed, so the persistent UI shows a normal-looking plan with 0 queued actions and unchanged credits."
+}

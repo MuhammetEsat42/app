@@ -1,0 +1,42 @@
+{
+  "summary": "Retest of the 4 frontend fixes from iteration_1 + core workspace regression check (frontend-only scope, backend suite not re-run). VERIFIED FIXED: (1) Responsive nav - mobile-nav-trigger visible at 768px and 390px, Sheet drawer opens with all 8 nav links + logout-btn, drawer navigation works (billing) and drawer closes on selection, logout from drawer returns to /login; desktop sidebar correctly hidden below lg. (2) Toast position - login toast renders bottom-right (y=1002 of 1080) with zero geometric overlap with credit-balance or studio-status-pill. (3) Markdown rendering in ai-plan-stream - ReactMarkdown+remarkGfm active (.gb-markdown), rendered <strong>=4, inline <code>=23, <table>=1, <ul>/<li> present, no literal '```' fences and no raw pipe tables. (4) Hard-stop UX - with credits forced to 3, backend hard_stop produced a persistent inline [data-testid=hard-stop-banner] ('Out of credits - This action needed 8 credits, you have 2. No further actions were queued.') plus buy-credits-cta which navigates to /billing. Regression: all 8 sidebar routes render at 1920px with no error nodes; prompt run streams a plan with 4 action cards (action-create_instance/action-write_script), Monaco code-preview populated with tabbed Luau (582 chars, monaco-editor mounted), credits 138->120 and ledger entries correct. HOWEVER a NEW CRITICAL backend regression was found and blocked the workspace flow initially (see backend_issues); I applied a 1-line undefined-variable fix in ai_agent.py to unblock retesting.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/workspace/prompt (ai_agent.run_agent)", "issue": "REGRESSION introduced by the atomic-credit-deduction fix: line 211/214 still referenced the removed local `credits` (renamed to start_credits), so Python resolved the builtin `credits` (_Printer) and EVERY prompt run aborted with SSE {type:error, message:'AI planner error: unsupported operand type(s) for -: _Printer and int'} -> 0 actions, no Luau, no credit spend. Reproduced via /app/backend/tests/sse_probe.py and in the UI (plan stopped after 'Step 1', 0 action cards). I fixed it in place (credits -> start_credits) and re-verified: 3 actions queued, 18 credits deducted, credits 156->138. Main agent should review the fix and add a regression test.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "supervisor:redis", "issue": "Still worth confirming - iteration_1 reported the redis supervisor program in FATAL state; not re-checked this round."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Workspace ai-plan-stream", "issue": "LOW: a few literal '**' pairs still appear in the completed plan text (bold markers emitted inside inline-code spans / table cells where markdown does not apply). Bold, code, lists and GFM tables otherwise render correctly.", "selector": "[data-testid=\"ai-plan-stream\"]", "priority": "LOW"},
+      {"component": "ApiKeys keys-list", "issue": "Carry-over from iteration_1 (not fixed / not in scope this round): revoked keys accumulate with no filter or delete.", "selector": "[data-testid=\"keys-list\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Cost preview vs actual spend", "issue": "Carry-over: estimate now says '~9+ credits (min)' which is honest labelling, but actual spend was 18 credits (2x the preview) for the demo Beacon prompt. Still misleading in magnitude.", "affected_selectors": ["[data-testid=\"credit-estimate\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Workspace mobile 390px", "issues": ["Bottom-right toast overlays the Luau Preview panel content on small screens (header is now safe, so this is cosmetic)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/sse_probe.py", "/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Review my 1-line fix in /app/backend/ai_agent.py (line 211/214: credits -> start_credits) and add a regression test asserting the SSE stream ends with a `done` event (no `error` event) for a normal prompt",
+    "Optionally align credit-estimate magnitude with real multi-script action pricing",
+    "Optionally strip stray '**' inside inline-code/table cells or instruct the model not to emit bold inside code spans"
+  ],
+  "critical_code_review_comments": [
+    "ai_agent.py: the pre-check `start_credits - spent < cost` is now redundant with the atomic conditional $inc below it; keeping both means the hard_stop `remaining` value can be stale. Consider relying solely on the atomic update (modified_count==0) path.",
+    "Plan text is never persisted in prompt_history (only prompt/actions/credits_used), so the History page cannot show what the model said - consider storing plan_text.",
+    "An undefined-name bug slipped through because `credits` is a Python builtin; enable a linter rule (flake8-builtins / ruff A001) on backend to catch builtin shadowing/misuse."
+  ],
+  "updated_files": ["/app/backend/ai_agent.py", "/app/backend/tests/sse_probe.py"],
+  "success_rate": {"backend": "not re-run (only /api/workspace/prompt probed - failed then fixed)", "frontend": "100% of the 4 targeted fixes verified + core workspace regression pass"},
+  "seed_data_creation": "No new users. Seeded user test@guiblox.com credits were temporarily set to 3 to reach the hard_stop path and then restored to 150 (was 156; 3 real Claude runs were spent during retest).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "test@guiblox.com / Test1234! (valid, Studio plan, 150 credits after retest)",
+  "context_for_next_testing_agent": "All 4 iteration_1 frontend issues are fixed and verified (mobile Sheet drawer at 768/390, bottom-right toasts, markdown plan stream, persistent hard-stop banner + buy-credits CTA). Use /app/backend/tests/sse_probe.py for a fast raw-SSE check of the prompt endpoint before doing expensive UI runs - it prints all non-token events and the credit balance. Action cards use data-testid `action-<tool>` (e.g. action-write_script), NOT `action-card-*`. Mobile nav testids are duplicated in DOM (hidden desktop aside + drawer) so scope drawer assertions to [role=\"dialog\"]. Each real prompt run costs ~18 credits.",
+  "rca_of_the_issue": "The iteration_1 fix renamed the local `credits` snapshot to `start_credits` but left two references at ai_agent.py:211/214. Because `credits` is a CPython site builtin (_Printer), the name resolved silently instead of raising NameError, and the subtraction raised TypeError inside the SSE generator, which the except block converted into an `error` event - so the UI showed a truncated plan with 0 action cards and unchanged credits on every run. Fixed by using start_credits."
+}

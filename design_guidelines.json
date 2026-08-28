@@ -1,0 +1,192 @@
+{
+  "design_system": {
+    "theme_name": "V1 Neon Purple (Roblox Studio Cloud-to-Studio Copilot)",
+    "description": "Tactical cyber-studio interface blending professional IDE ergonomics with Roblox engine aesthetics, deep obsidian surfaces, and luminous electric violet accents.",
+    "theme_mode": "dark",
+    "locked_specs": {
+      "background": "#0D0D14",
+      "accent_primary": "#8B5CF6",
+      "accent_secondary": "#A78BFA",
+      "font_family_main": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "font_family_code": "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+      "border_radius": "12px (rounded-xl)"
+    }
+  },
+  "color_palette": {
+    "background_primary": "#0D0D14",
+    "background_surface": "#13131F",
+    "background_elevated": "#1A192B",
+    "background_card_glass": "rgba(19, 19, 31, 0.85)",
+    "background_active_item": "#24213D",
+    "border_subtle": "rgba(139, 92, 246, 0.15)",
+    "border_medium": "rgba(139, 92, 246, 0.35)",
+    "border_highlight": "rgba(167, 139, 250, 0.6)",
+    "text_primary": "#F8FAFC",
+    "text_secondary": "#94A3B8",
+    "text_muted": "#64748B",
+    "accent_primary": "#8B5CF6",
+    "accent_hover": "#7C3AED",
+    "accent_glow": "#A78BFA",
+    "status_studio_connected": "#10B981",
+    "status_studio_syncing": "#F59E0B",
+    "status_studio_disconnected": "#EF4444",
+    "status_ai_streaming": "#8B5CF6",
+    "status_cyber_cyan": "#06B6D4",
+    "luau_syntax": {
+      "keywords": "#C084FC",
+      "functions": "#38BDF8",
+      "strings": "#4ADE80",
+      "numbers": "#F472B6",
+      "comments": "#64748B",
+      "roblox_classes": "#FBBF24"
+    }
+  },
+  "typography": {
+    "font_family": "Inter, sans-serif",
+    "code_font_family": "'JetBrains Mono', monospace",
+    "scale": {
+      "h1_hero": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white",
+      "h3_widget": "text-xl sm:text-2xl font-semibold text-slate-100",
+      "h4_card": "text-base sm:text-lg font-medium text-slate-200",
+      "body": "text-sm sm:text-base font-normal text-slate-300 leading-relaxed",
+      "caption": "text-xs font-medium text-slate-400 tracking-wide uppercase",
+      "code_snippet": "text-xs sm:text-sm font-mono leading-normal"
+    }
+  },
+  "layout_and_grids": {
+    "workspace_layout": {
+      "header_height": "h-16 border-b border-purple-500/20 bg-[#0D0D14]/90 backdrop-blur-xl sticky top-0 z-40",
+      "main_grid": "grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 lg:p-6 min-h-[calc(100vh-4rem)]",
+      "prompt_control_pane": "lg:col-span-5 xl:col-span-4 flex flex-col gap-4",
+      "stage_preview_pane": "lg:col-span-7 xl:col-span-8 flex flex-col gap-4"
+    },
+    "bento_cards": {
+      "card_style": "bg-[#13131F]/90 border border-purple-500/20 rounded-xl p-5 shadow-lg shadow-purple-950/20 backdrop-blur-md relative overflow-hidden transition-all duration-200 hover:border-purple-500/40 hover:shadow-purple-900/30",
+      "glass_glow_effect": "before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:via-transparent before:to-transparent before:pointer-events-none"
+    }
+  },
+  "ui_components_design": {
+    "studio_bridge_indicator": {
+      "description": "Live status pill indicating Roblox Studio plugin connection with ping ms, active place name, and sync status.",
+      "styles": "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-[#1A192B] border border-purple-500/30 text-slate-200"
+    },
+    "context_selection_badge": {
+      "description": "Shows current active Roblox instance selection synced from Roblox Studio (e.g. Selection: Workspace.MainTower.WeaponSpawn).",
+      "styles": "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-purple-950/40 border border-purple-500/40 text-purple-300"
+    },
+    "ai_action_plan_stream": {
+      "description": "Streaming step-by-step Luau/Roblox generation plan with status checkmarks, diffs, and credit meters.",
+      "styles": "bg-[#0D0D14]/80 border border-purple-500/20 rounded-xl p-4 space-y-3 font-mono text-xs"
+    },
+    "monaco_code_preview": {
+      "description": "Luau code viewer with syntax highlighting, line numbers, Copy Luau, Insert to Studio, and Fix with AI error triggers.",
+      "styles": "bg-[#0A0A0F] border border-purple-500/30 rounded-xl overflow-hidden font-mono"
+    },
+    "toolbox_asset_cards": {
+      "description": "Preview cards for AI-queried or generated Roblox marketplace assets with verified creator badge, likes %, and thumbnail.",
+      "styles": "bg-[#1A192B] border border-purple-500/20 rounded-xl p-3 hover:border-purple-400/50 transition duration-150"
+    },
+    "map_terrain_preview": {
+      "description": "Voxel bounding-box visualizer with material badges (Grass, Basalt, Neon, Water), scatter density, and dimension sliders.",
+      "styles": "bg-[#10101C] border border-purple-500/25 rounded-xl p-4 relative"
+    },
+    "live_log_stream": {
+      "description": "Console terminal stream showing WebSocket heartbeats, Luau compiler output, and interactive 'Fix with AI' CTA on red errors.",
+      "styles": "bg-[#0B0B11] border border-purple-500/25 rounded-xl font-mono text-xs p-4 max-h-56 overflow-y-auto space-y-1.5"
+    }
+  },
+  "pages_and_navigation": {
+    "nav_links": [
+      { "name": "Workspace", "path": "/workspace", "icon": "Terminal", "data_testid": "nav-workspace-link" },
+      { "name": "Projects", "path": "/projects", "icon": "FolderGit2", "data_testid": "nav-projects-link" },
+      { "name": "Prompt History", "path": "/history", "icon": "History", "data_testid": "nav-history-link" },
+      { "name": "Credits & Plans", "path": "/billing", "icon": "Zap", "data_testid": "nav-billing-link" },
+      { "name": "Team", "path": "/team", "icon": "Users", "data_testid": "nav-team-link" },
+      { "name": "API & Bridge Keys", "path": "/api-keys", "icon": "KeyRound", "data_testid": "nav-apikeys-link" },
+      { "name": "Security & Audit", "path": "/security", "icon": "ShieldCheck", "data_testid": "nav-security-link" },
+      { "name": "Settings", "path": "/settings", "icon": "Sliders", "data_testid": "nav-settings-link" }
+    ],
+    "pricing_tiers": [
+      {
+        "name": "Starter / Free",
+        "price": "$0",
+        "period": "forever",
+        "credits": "100 AI credits/mo",
+        "features": ["1 Connected Studio Instance", "Standard Luau Code Gen", "Public Toolbox Search", "Community Discord Support"],
+        "cta": "Get Started Free",
+        "data_testid": "plan-free-button"
+      },
+      {
+        "name": "Professional",
+        "price": "$29",
+        "period": "per month",
+        "credits": "2,500 AI credits/mo",
+        "badge": "Most Popular",
+        "features": ["Unlimited Studio Sync", "Senior Roblox Engineer AI Tone", "Live Map & Terrain Bounding Gen", "One-Click Error AI Auto-Fix", "Sub-second WebSocket Bridge", "Private Toolbox Indexing"],
+        "cta": "Upgrade to Pro",
+        "data_testid": "plan-pro-button"
+      },
+      {
+        "name": "Studio Team",
+        "price": "$89",
+        "period": "per month",
+        "credits": "10,000 AI credits/mo",
+        "features": ["Up to 10 Team Seats", "Role-based Studio permissions", "IP Allowlisting & Security Audit", "Custom Luau Style Guide Prompts", "Dedicated Bridge Servers"],
+        "cta": "Launch Studio Team",
+        "data_testid": "plan-studio-button"
+      }
+    ]
+  },
+  "image_urls": {
+    "hero_background_abstract": {
+      "url": "https://images.unsplash.com/photo-1775342989464-623409a8eead?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHw0fHxuZW9uJTIwM2QlMjBjdWJlcyUyMHRlY2hub2xvZ3l8ZW58MHx8fHwxNzg3OTUwODAxfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Luminous neon voxel sphere with geometric purple and blue cubes on deep dark background, perfect for Roblox 3D generative hero showcase.",
+      "category": "landing_hero_preview"
+    },
+    "geometric_crystals_grid": {
+      "url": "https://images.unsplash.com/photo-1524169358666-79f22534bc6e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHwyfHxuZW9uJTIwM2QlMjBjdWJlcyUyMHRlY2hub2xvZ3l8ZW58MHx8fHwxNzg3OTUwODAxfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Neon edged low-poly polygon terrain geometry, ideal for Map & Terrain generation feature highlights.",
+      "category": "feature_terrain_card"
+    },
+    "code_matrix_preview": {
+      "url": "https://images.unsplash.com/photo-1759661881353-5b9cc55e1cf4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxjeWJlcnB1bmslMjBkZXZlbG9wZXIlMjBkYXJrfGVufDB8fHx8MTc4Nzk1MDc5NXww&ixlib=rb-4.1.0&q=85",
+      "description": "High-contrast developer code lines in dark ambient glow, ideal for Luau Copilot code engine showcase.",
+      "category": "feature_luau_ide"
+    },
+    "team_avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1740252117044-2af197eea287?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxhdmF0YXIlMjBwb3J0cmFpdCUyMGRldmVsb3BlcnxlbnwwfHx8fDE3ODc5NTA3OTV8MA&ixlib=rb-4.1.0&q=85",
+        "name": "Alex 'Byte' Vance",
+        "role": "Lead Scripter & Systems Architect"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1740252117027-4275d3f84385?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwzfHxhdmF0YXIlMjBwb3J0cmFpdCUyMGRldmVsb3BlcnxlbnwwfHx8fDE3ODc5NTA3OTV8MA&ixlib=rb-4.1.0&q=85",
+        "name": "Jordan K.",
+        "role": "Roblox World & Level Designer"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1740252117013-4fb21771e7ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHw0fHxhdmF0YXIlMjBwb3J0cmFpdCUyMGRldmVsb3BlcnxlbnwwfHx8fDE3ODc5NTA3OTV8MA&ixlib=rb-4.1.0&q=85",
+        "name": "Maya Chen",
+        "role": "Senior Luau Gameplay Engineer"
+      }
+    ]
+  },
+  "motion_and_interactions": {
+    "glow_pulse": "animate-pulse duration-1000",
+    "card_hover_lift": "hover:-translate-y-0.5 transition-transform duration-150 ease-out",
+    "status_dot_ping": "relative flex h-2.5 w-2.5 before:absolute before:inline-flex before:h-full before:w-full before:rounded-full before:bg-emerald-400 before:animate-ping before:opacity-75 after:relative after:inline-flex after:rounded-full after:h-2.5 after:w-2.5 after:bg-emerald-500",
+    "shimmer_button": "relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent"
+  },
+  "instructions_to_main_agent": {
+    "react_files_format": "Use .js and .jsx files for all frontend components (not .tsx).",
+    "theme_rules": "Strictly implement V1 Neon Purple: #0D0D14 background, #8B5CF6 / #A78BFA accents, rounded-xl (12px), Inter sans-serif.",
+    "data_testids": "Ensure all interactive elements (buttons, inputs, tabs, modal triggers, status badges, copy buttons, fix error buttons) include explicit data-testid attributes.",
+    "full_feature_set": "Implement comprehensive state management for: AI Workspace prompt generation, simulated Studio WebSocket bridge, Luau code preview with error fix trigger, Toolbox 3D asset explorer, Map voxel terrain builder preview, Prompt History rollback, Credit billing meter with checkout modal, Team RBAC, API Keys generator with IP allowlisting, and Security audit trail.",
+    "no_transparent_surfaces": "Dropdowns, modals, popovers, and sticky headers must use opaque or heavy crystal backdrop backgrounds with distinct 1px purple borders."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": {
+    "anti_ai_slop": "Do not build flat monotone boxes. Use rich layered z-indices, dark purple ambient glow cards, crisp 1px borders (#8B5CF6 with 20-40% opacity), and authentic Roblox Luau engineering terminology (DataModel, Instance.new, ReplicatedStorage, TweenService, RaycastParams, CollectionService).",
+    "tone_of_voice": "Senior Roblox Engineer AI Tone — authoritative, precise, performance-optimized (encouraging task.spawn, typed Luau, memory management, avoidance of wait() in favor of task.wait())."
+  }
+}
