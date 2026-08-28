@@ -12,7 +12,7 @@ from rate_limiter import RateLimitMiddleware
 from ws_manager import manager
 from config import FREE_SIGNUP_CREDITS
 
-from routers import auth, apikeys, bridge, workspace, dashboard
+from routers import auth, apikeys, bridge, workspace, dashboard, payments, team
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("guiblox")
@@ -45,12 +45,26 @@ async def health():
     return {"ok": True}
 
 
+@api.get("/plugin/code")
+async def plugin_code():
+    """Serve the GUI Blox Connect Luau source so users can paste it into Studio."""
+    from pathlib import Path
+    p = Path(__file__).parent.parent / "plugin" / "GuiBloxConnect.server.lua"
+    try:
+        return {"filename": "GuiBloxConnect.server.lua", "code": p.read_text()}
+    except Exception:
+        return {"filename": "GuiBloxConnect.server.lua", "code": "-- plugin source unavailable"}
+
+
 app.include_router(api)
 app.include_router(auth.router)
 app.include_router(apikeys.router)
 app.include_router(bridge.router)
 app.include_router(workspace.router)
 app.include_router(dashboard.router)
+app.include_router(payments.router)
+app.include_router(payments.webhook_router)
+app.include_router(team.router)
 
 
 # ---- WebSocket live log/status stream (token via query param) ----

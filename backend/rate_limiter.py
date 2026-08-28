@@ -45,7 +45,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         # Skip websocket + stripe webhook + non-api
-        if not path.startswith("/api") or path.startswith("/api/ws") or path == "/api/billing/webhook":
+        if not path.startswith("/api") or path.startswith("/api/ws") or path == "/api/webhook/stripe":
             return await call_next(request)
 
         ip = client_ip(request)

@@ -54,6 +54,9 @@ async def estimate(body: PromptRequest, user: dict = Depends(get_verified_user))
     if any(w in text for w in ["find", "search", "toolbox", "asset", "model"]):
         est += CREDIT_COST["search_toolbox"]
         hints.append("toolbox search")
+    if any(w in text for w in ["animate", "animation", "tween", "pulse", "rotate", "spin", "fade", "bounce"]):
+        est += CREDIT_COST["create_animation"]
+        hints.append("animation")
     return {"estimate": est, "hints": hints, "credits": user.get("credits", 0)}
 
 

@@ -23,6 +23,8 @@ prompt_history = db.prompt_history
 audit_logs = db.audit_logs
 sessions = db.sessions
 bridge_state = db.bridge_state
+payment_transactions = db.payment_transactions
+team_invites = db.team_invites
 
 
 async def ensure_indexes():
@@ -33,3 +35,5 @@ async def ensure_indexes():
     await commands.create_index([("user_id", 1), ("status", 1)])
     await prompt_history.create_index([("user_id", 1), ("created_at", -1)])
     await audit_logs.create_index([("user_id", 1), ("created_at", -1)])
+    await team_invites.create_index([("owner_id", 1), ("email", 1)], unique=True)
+    await payment_transactions.create_index("session_id", unique=True)

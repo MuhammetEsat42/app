@@ -13,6 +13,8 @@ import Billing from "@/pages/Billing";
 import Team from "@/pages/Team";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
+import PaymentResult from "@/pages/PaymentResult";
+import NotFound from "@/pages/NotFound";
 
 function Protected() {
   const { user, loading } = useAuth();
@@ -30,6 +32,8 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Auth mode="login" />} />
             <Route path="/register" element={<Auth mode="register" />} />
+            <Route path="/payment/success" element={<PaymentResult status="success" />} />
+            <Route path="/payment/cancel" element={<PaymentResult status="cancel" />} />
             <Route element={<Protected />}>
               <Route path="/workspace" element={<Workspace />} />
               <Route path="/projects" element={<Projects />} />
@@ -37,9 +41,11 @@ function App() {
               <Route path="/billing" element={<Billing />} />
               <Route path="/team" element={<Team />} />
               <Route path="/api-keys" element={<ApiKeys />} />
+              <Route path="/keys" element={<ApiKeys />} />
               <Route path="/security" element={<Security />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
         <Toaster position="bottom-right" theme="dark" />

@@ -10,16 +10,30 @@ CREDIT_COST = {
     "paint_terrain_material": 8,
     "scatter_assets": 10,
     "insert_toolbox_model": 2,
+    "create_animation": 4,
 }
 
 FREE_SIGNUP_CREDITS = 5
 
-# Stripe credit packages (Phase 5 — display only for now)
-CREDIT_PACKAGES = [
-    {"id": "pack_100", "price_usd": 10, "credits": 100, "label": "Starter Pack"},
-    {"id": "pack_150", "price_usd": 15, "credits": 150, "label": "Builder Pack"},
-    {"id": "pack_200", "price_usd": 20, "credits": 200, "label": "Studio Pack"},
+# ---- Payment catalog (server-authoritative; frontend sends only item_id) ----
+# One-time credit packs
+CREDIT_PACKS = [
+    {"id": "pack_100",  "type": "credits", "price_usd": 10.0,  "credits": 100,  "label": "Starter Pack"},
+    {"id": "pack_150",  "type": "credits", "price_usd": 15.0,  "credits": 150,  "label": "Builder Pack"},
+    {"id": "pack_200",  "type": "credits", "price_usd": 20.0,  "credits": 200,  "label": "Studio Pack"},
+    {"id": "pack_2000", "type": "credits", "price_usd": 200.0, "credits": 2000, "label": "Mega Pack"},
 ]
+# Annual plans (billed yearly; grants plan for 365 days + a large credit bundle)
+ANNUAL_PLANS = [
+    {"id": "pro_annual",    "type": "annual", "price_usd": 144.0, "credits": 1800, "plan": "professional",
+     "label": "Professional — Annual", "monthly_usd": 15, "save_pct": 20},
+    {"id": "studio_annual", "type": "annual", "price_usd": 192.0, "credits": 2400, "plan": "studio",
+     "label": "Studio — Annual", "monthly_usd": 20, "save_pct": 20},
+]
+PAYMENT_CATALOG = {it["id"]: it for it in (CREDIT_PACKS + ANNUAL_PLANS)}
+
+# Backwards-compat alias used by older billing UI
+CREDIT_PACKAGES = CREDIT_PACKS
 
 PLANS = {
     "free": {"name": "Free", "history_days": 30, "team": False, "ip_allowlist": False, "max_keys": 2},

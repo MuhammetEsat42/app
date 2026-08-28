@@ -108,6 +108,19 @@ TOOLS = [
             "jitter": {"type": "number"},
         }, "required": ["asset", "count"]},
     }},
+    {"type": "function", "function": {
+        "name": "create_animation",
+        "description": "Animate an instance with TweenService — position, rotation, size, color or transparency over time.",
+        "parameters": {"type": "object", "properties": {
+            "target": {"type": "string", "description": "Instance path or 'Selection'"},
+            "goal": {"type": "object", "description": "Target property values, e.g. {Transparency: 1, Position: [0,10,0]}"},
+            "duration": {"type": "number", "description": "Seconds"},
+            "easing_style": {"type": "string", "description": "e.g. Quad, Sine, Back, Elastic"},
+            "easing_direction": {"type": "string", "enum": ["In", "Out", "InOut"]},
+            "repeat_count": {"type": "integer", "description": "-1 for infinite"},
+            "reverses": {"type": "boolean"},
+        }, "required": ["target", "goal", "duration"]},
+    }},
 ]
 
 

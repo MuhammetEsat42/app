@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamPrompt, api } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useAuth } from "@/context/AuthContext";
 import { useLogStream } from "@/hooks/useLogStream";
 import LuauEditor from "@/components/LuauEditor";
+import TerrainPreview from "@/components/TerrainPreview";
 import { StatusDot } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +26,7 @@ const TOOL_META = {
   sculpt_terrain: { icon: Mountain, label: "Sculpt Terrain", color: "#06B6D4" },
   paint_terrain_material: { icon: Mountain, label: "Paint Biome", color: "#F59E0B" },
   scatter_assets: { icon: Trees, label: "Scatter Assets", color: "#22C55E" },
+  create_animation: { icon: Sparkles, label: "Create Animation", color: "#F472B6" },
 };
 
 const SUGGESTIONS = [
@@ -31,6 +34,7 @@ const SUGGESTIONS = [
   "Build a main menu ScreenGui with Play, Settings and Quit buttons",
   "Generate a sakura forest map: sculpt terrain, paint grass biome, scatter 200 sakura trees and gravel",
   "Write a strict-typed sprint system LocalScript using ContextActionService",
+  "Animate a floating platform that bobs up and down and slowly rotates forever",
 ];
 
 export default function Workspace() {
@@ -269,7 +273,7 @@ export default function Workspace() {
             )}
             {displayScript && (
               <Button data-testid="copy-luau-btn" size="sm" variant="ghost"
-                      onClick={() => { navigator.clipboard.writeText(displayScript.source); toast.success("Luau copied"); }}
+                      onClick={async () => { const ok = await copyToClipboard(displayScript.source); toast[ok ? "success" : "error"](ok ? "Luau copied" : "Copy failed"); }}
                       className="ml-auto h-7 text-xs text-slate-400 hover:text-white">
                 <Copy size={13} className="mr-1" /> Copy
               </Button>
@@ -300,6 +304,7 @@ export default function Workspace() {
               <div className="text-xs text-slate-600 font-mono py-6 text-center">No asset or terrain ops yet</div>
             ) : (
               <div className="space-y-2">
+                {terrainOps.length > 0 && <TerrainPreview ops={terrainOps} />}
                 {toolboxSearches.map((a) => (
                   <div key={a.command_id} className="flex items-center gap-3 p-2.5 rounded-lg bg-gb-elevated border border-purple-500/20">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/30 to-purple-500/20 grid place-items-center">

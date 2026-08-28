@@ -18,8 +18,7 @@ GUI Blox — Cloud-to-Studio AI Copilot for Roblox (LOCKED v2.2). Web dashboard 
 ## Core Requirements (static)
 Cloud-to-Studio bridge; AI action-plan queueing; credit economy; multi-layer security (Argon2id, JWT rotation, Redis rate limits, anti-fraud); advanced terrain generation; live logs; Fix-with-AI.
 
-## Implemented (2026-08-28) — Phase 1 + AI Workspace demo
-- **Auth:** register + MOCK email verification (returns `verification_code_mock`) + login + JWT access(15m)/refresh(7d) with rotation & revocation + logout + /me. Argon2id passwords.
+## Implemented (2026-08-28) — Phase 1 + AI Workspace demo- **Auth:** register + MOCK email verification (returns `verification_code_mock`) + login + JWT access(15m)/refresh(7d) with rotation & revocation + logout + /me. Argon2id passwords.
 - **Anti-fraud (infra, mostly mocked):** disposable-email blocklist, IP signup cap (2/24h), device fingerprint uniqueness, Turnstile stub, IPQualityScore stub.
 - **API keys:** 32-byte secret, Argon2id-hashed, one-time full reveal (`gb_<id>.<secret>`), masked display, per-key IP/CIDR allowlist, revoke/regenerate, last-used IP/timestamp, per-plan caps (Free 2 / Pro-Studio 5), constant-time verify.
 - **Rate limiting (Redis):** per-IP 60/min & 500/hr, auth 5/min, per-user prompt 30/min & 200/hr, per-key poll 60/min. 429 + Retry-After.
@@ -34,7 +33,16 @@ Cloud-to-Studio bridge; AI action-plan queueing; credit economy; multi-layer sec
 - Plugin cannot run in this env; bridge tested via curl with X-API-Key.
 
 ## Backlog (prioritized)
-- **P0 (Phase 5):** Stripe checkout + webhook (signature verify), dynamic credit top-up.
+
+## Implemented (2026-08-29) — Payments + Animation + Team + Terrain Preview
+- **Stripe payments (Flow B, shared test key):** `/api/payments/checkout|status|catalog` + `/api/webhook/stripe`. 4 credit packs (100/$10, 150/$15, 200/$20, 2000/$200) + 2 annual plans (Pro $144/1800cr, Studio $192/2400cr, save 20%). Server-authoritative catalog, idempotent atomic credit grant, auth+ownership on status, origin allowlist (anti open-redirect). Real Stripe test payment verified e2e. NOTE: claimable sandbox unsupported for Turkey → shared test key until user connects own account.
+- **Animation executor tool:** `create_animation` (TweenService) in AI agent + plugin, cost 4.
+- **Team invites:** `/api/team/*` invite/list/role-change/remove, View/Edit roles, Pro/Studio gated, compound-unique invites.
+- **3D Terrain Preview:** CSS-3D voxel bounding-box + biome layers + scatter dots in Workspace.
+- **Plugin delivery:** `/api/plugin/code` + Settings "View plugin code" modal (copy). Route `/api-keys`→`/keys` (ingress fix). Robust clipboard helper. 404 page.
+
+### Remaining P0/P1
+- **P1:** Resend real email verification (needs RESEND_API_KEY from user) — currently MOCK.
 - **P1:** Real email (Resend) for verification; wire Turnstile + IPQualityScore with keys; behavioral auto-suspend.
 - **P1 (Phase 4 polish):** richer Map/Terrain 3D preview; toolbox real search integration.
 - **P2:** Team invite flow + View/Edit roles (Phase 6); revoked-key filtering; align credit estimate magnitude; store/show plan_text in History UI.

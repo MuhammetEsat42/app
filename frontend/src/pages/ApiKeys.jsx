@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboard";
 import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +84,7 @@ export default function ApiKeys() {
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-[#0A0A0F] border border-purple-500/30 font-mono text-xs break-all">
                   <span data-testid="revealed-key" className="flex-1 text-gb-glow">{revealed}</span>
                   <Button size="sm" variant="ghost" data-testid="copy-key-btn"
-                          onClick={() => { navigator.clipboard.writeText(revealed); setCopied(true); toast.success("Copied"); setTimeout(() => setCopied(false), 1500); }}>
+                          onClick={async () => { const ok = await copyToClipboard(revealed); if (ok) { setCopied(true); toast.success("Copied"); setTimeout(() => setCopied(false), 1500); } else { toast.error("Copy failed — select manually"); } }}>
                     {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                   </Button>
                 </div>

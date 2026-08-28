@@ -1,14 +1,38 @@
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { api, BACKEND_URL } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboard";
 import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Sliders, Download, ShieldOff } from "lucide-react";
+import { Sliders, Download, ShieldOff, Copy, Check, Puzzle } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  const downloadPlugin = () => {
-    toast.success("GUI Blox Connect (.lua) available in /app/plugin — upload to Roblox Creator Store");
+  const openPlugin = async () => {
+    try {
+      const { data } = await api.get("/plugin/code");
+      setCode(data.code);
+      setOpen(true);
+    } catch (_) { toast.error("Could not load plugin code"); }
+  };
+
+  const copyCode = async () => {
+    const ok = await copyToClipboard(code);
+    if (ok) {
+      setCopied(true);
+      toast.success("Plugin code copied — paste into a Studio Script");
+      setTimeout(() => setCopied(false), 1500);
+    } else {
+      toast.error("Couldn't copy — select the code and copy manually");
+    }
   };
 
   return (
@@ -25,10 +49,13 @@ export default function Settings() {
         </div>
 
         <div className="gb-glass rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-1">GUI Blox Connect</h3>
-          <p className="text-xs text-slate-400 mb-3">Install the bridge plugin in Roblox Studio, paste an API key, and enable HTTP requests.</p>
-          <Button data-testid="download-plugin-btn" onClick={downloadPlugin} className="bg-gb-violet hover:bg-gb-hover text-white rounded-xl">
-            <Download size={15} className="mr-1.5" /> Get plugin
+          <div className="flex items-center gap-2 mb-1"><Puzzle size={16} className="text-gb-glow" /><h3 className="text-sm font-semibold text-white">GUI Blox Connect (Studio plugin)</h3></div>
+          <p className="text-xs text-slate-400 mb-3">
+            Paste this Luau into a Studio plugin Script, enable HTTP requests (Game Settings → Security → Allow HTTP Requests),
+            then enter one of your API keys in the plugin widget. Backend URL is pre-filled: <span className="font-mono text-gb-glow">{BACKEND_URL}</span>
+          </p>
+          <Button data-testid="download-plugin-btn" onClick={openPlugin} className="bg-gb-violet hover:bg-gb-hover text-white rounded-xl">
+            <Download size={15} className="mr-1.5" /> View plugin code
           </Button>
         </div>
 
@@ -37,6 +64,22 @@ export default function Settings() {
           <p className="text-xs text-slate-400">Your prompts and generated code are never used to train external AI models. Storage is user-scoped and auto-purged per your plan's retention window.</p>
         </div>
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-gb-surface border-purple-500/30 text-slate-100 max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-8">
+              GuiBloxConnect.server.lua
+              <Button size="sm" data-testid="copy-plugin-code-btn" onClick={copyCode} className="bg-gb-violet hover:bg-gb-hover rounded-lg h-8">
+                {copied ? <Check size={14} className="mr-1" /> : <Copy size={14} className="mr-1" />} Copy
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <pre className="text-[11px] font-mono text-slate-300 bg-[#0A0A0F] border border-purple-500/25 rounded-xl p-4 max-h-[60vh] overflow-auto whitespace-pre">
+            {code}
+          </pre>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

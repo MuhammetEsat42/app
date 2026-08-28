@@ -15,7 +15,7 @@ const NAV = [
   { name: "Prompt History", path: "/history", icon: History, testid: "nav-history-link" },
   { name: "Credits & Plans", path: "/billing", icon: Zap, testid: "nav-billing-link" },
   { name: "Team", path: "/team", icon: Users, testid: "nav-team-link" },
-  { name: "API & Bridge Keys", path: "/api-keys", icon: KeyRound, testid: "nav-apikeys-link" },
+  { name: "API & Bridge Keys", path: "/keys", icon: KeyRound, testid: "nav-apikeys-link" },
   { name: "Security & Audit", path: "/security", icon: ShieldCheck, testid: "nav-security-link" },
   { name: "Settings", path: "/settings", icon: Sliders, testid: "nav-settings-link" },
 ];

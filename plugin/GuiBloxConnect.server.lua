@@ -229,6 +229,39 @@ function Executors.scatter_assets(p): (boolean, {string})
 	return true, { ("Scattered %d x %s (Poisson-disk, jitter %.2f)"):format(count, p.asset or "asset", p.jitter or 0.3) }
 end
 
+function Executors.create_animation(p): (boolean, {string})
+	local TweenService = game:GetService("TweenService")
+	local targets = {}
+	if p.target == "Selection" then
+		targets = Selection:Get()
+	else
+		local found = workspace:FindFirstChild(p.target, true)
+		if found then table.insert(targets, found) end
+	end
+	if #targets == 0 then return false, { "Animation target not found" } end
+
+	local style = Enum.EasingStyle[p.easing_style] or Enum.EasingStyle.Quad
+	local dir = Enum.EasingDirection[p.easing_direction] or Enum.EasingDirection.Out
+	local info = TweenInfo.new(p.duration or 1, style, dir, p.repeat_count or 0, p.reverses or false)
+
+	local goal = {}
+	for k, v in pairs(p.goal or {}) do
+		if typeof(v) == "table" and #v == 3 then
+			if k:find("Color") then
+				goal[k] = Color3.fromRGB(v[1], v[2], v[3])
+			else
+				goal[k] = Vector3.new(v[1], v[2], v[3])
+			end
+		else
+			goal[k] = v
+		end
+	end
+	for _, t in ipairs(targets) do
+		pcall(function() TweenService:Create(t, info, goal):Play() end)
+	end
+	return true, { ("Animated %d instance(s) over %.1fs"):format(#targets, p.duration or 1) }
+end
+
 ------------------------------------------------------------------
 -- Execute a command with undo waypoint
 ------------------------------------------------------------------
