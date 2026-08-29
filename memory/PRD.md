@@ -43,6 +43,12 @@ Cloud-to-Studio bridge; AI action-plan queueing; credit economy; multi-layer sec
 
 ### Remaining P0/P1
 - **P1:** Resend real email verification (needs RESEND_API_KEY from user) — currently MOCK.
+
+## Implemented (2026-08-29 pm) — Core capabilities focus
+- **Real terrain in Studio (plugin):** `sculpt_terrain` now builds a layered **Perlin heightmap** via `math.noise` + `Terrain:FillBlock` columns; `paint_terrain_material` does **biome height-band** stamping via terrain raycast + `FillBall`; `scatter_assets` uses **Poisson-disk grid + terrain raycast + real CFrame placement** (procedural trees/rocks, yaw + jitter). Chunked with `task.wait()`, hard-limits enforced.
+- **Real email (Resend):** verification code now emailed (branded HTML); mock code removed from API + UI. Verified live send to account owner (email_sent:true). Added `POST /api/auth/resend-code` recovery + "Resend code" UI link.
+- **Marketplace assets:** plugin icon `plugin/GuiBloxConnect_icon_512.png` (neon-purple block/bridge) + `plugin/STORE_PAGE.md` Creator Store listing copy.
+- **Stripe clarification:** kept Stripe (global processor) via shared test key; TR only blocks the claimable *merchant* sandbox — swaps to user's own account on connect. Live Stripe deferred by user (commercial deprioritized).
 - **P1:** Real email (Resend) for verification; wire Turnstile + IPQualityScore with keys; behavioral auto-suspend.
 - **P1 (Phase 4 polish):** richer Map/Terrain 3D preview; toolbox real search integration.
 - **P2:** Team invite flow + View/Edit roles (Phase 6); revoked-key filtering; align credit estimate magnitude; store/show plan_text in History UI.

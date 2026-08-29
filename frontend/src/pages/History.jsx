@@ -22,7 +22,7 @@ export default function History() {
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <span className="text-[11px] text-slate-500 font-mono">{new Date(h.created_at).toLocaleString()}</span>
               {(h.actions || []).map((a, i) => (
-                <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-300 font-mono">{a.tool}</span>
+                <span key={a.command_id || `${h.id}-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-300 font-mono">{a.tool}</span>
               ))}
             </div>
           </div>

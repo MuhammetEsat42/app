@@ -33,30 +33,32 @@ async def get_verified_user(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
-async def get_api_key_user(request: Request, x_api_key: str = Header(None)) -> dict:
-    """Authenticate the Studio bridge plugin via X-API-Key. Returns {user, key}."""
-    if not x_api_key:
-        raise HTTPException(status_code=401, detail="Missing API key")
+async def _resolve_api_key(x_api_key: str) -> dict:
+    """Parse + verify an API key, returning the key doc. Raises 401 on any failure."""
     parsed = parse_api_key(x_api_key)
     if not parsed:
         raise HTTPException(status_code=401, detail="Malformed API key")
     record_id, secret = parsed
     key = await api_keys.find_one({"id": record_id}, {"_id": 0})
-    if not key or key.get("revoked"):
+    if not key or key.get("revoked") or not verify_secret(key["secret_hash"], secret):
         raise HTTPException(status_code=401, detail="Invalid API key")
-    if not verify_secret(key["secret_hash"], secret):
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    return key
+
+
+async def get_api_key_user(request: Request, x_api_key: str = Header(None)) -> dict:
+    """Authenticate the Studio bridge plugin via X-API-Key. Returns {user, key, ip}."""
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing API key")
+    key = await _resolve_api_key(x_api_key)
 
     ip = client_ip(request)
     allowlist = key.get("ip_allowlist") or []
     if allowlist and not ip_in_allowlist(ip, allowlist):
         raise HTTPException(status_code=403, detail="IP not allowed for this key")
 
-    # per-key poll rate limit
-    await enforce(f"key:{record_id}", "key_poll_per_min")
-
+    await enforce(f"key:{key['id']}", "key_poll_per_min")
     await api_keys.update_one(
-        {"id": record_id},
+        {"id": key["id"]},
         {"$set": {"last_used_at": iso(now_utc()), "last_used_ip": ip}},
     )
     user = await users.find_one({"id": key["user_id"]}, {"_id": 0})

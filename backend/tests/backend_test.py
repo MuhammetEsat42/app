@@ -14,7 +14,8 @@ import requests
 
 from conftest import BASE_URL, new_session, rand_ip
 
-PASSWORD = "Test1234!"
+import os
+PASSWORD = os.getenv("TEST_PASSWORD", "Test1234!")
 
 
 def uniq_email(tag="qa"):
@@ -76,7 +77,7 @@ class TestRegisterVerify:
         assert me.status_code == 200
         m = me.json()
         assert m["email"] == email
-        assert m["email_verified"] is True
+        assert m["email_verified"]
         assert m["credits"] == 5
         assert "password_hash" not in m and "_id" not in m
 
@@ -497,8 +498,8 @@ class TestDashboard:
         r = auth_client.get(f"{BASE_URL}/api/billing/packages", timeout=30)
         assert r.status_code == 200
         d = r.json()
-        assert len(d["packages"]) == 3
-        assert {p["id"] for p in d["packages"]} == {"pack_100", "pack_150", "pack_200"}
+        assert len(d["packages"]) == 4
+        assert {p["id"] for p in d["packages"]} == {"pack_100", "pack_150", "pack_200", "pack_2000"}
         assert d["plan"] == "studio"
 
     def test_security_audit_and_sessions(self, auth_client):
@@ -543,7 +544,7 @@ class TestVerificationGating:
         assert lr.status_code == 200, f"unverified login blocked: {lr.status_code}"
         s.headers.update({"Authorization": f"Bearer {lr.json()['access_token']}"})
         me = s.get(f"{BASE_URL}/api/auth/me", timeout=30)
-        assert me.status_code == 200 and me.json()["email_verified"] is False
+        assert me.status_code == 200 and not me.json()["email_verified"]
         assert me.json()["credits"] == 0, "credits granted before verification"
         for path in ["/api/keys", "/api/projects", "/api/history"]:
             assert s.get(f"{BASE_URL}{path}", timeout=30).status_code == 403, path

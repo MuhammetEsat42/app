@@ -23,7 +23,7 @@ export default function Team() {
       const { data } = await api.get("/team/members");
       setMembers(data.members);
       setCanManage(data.can_manage);
-    } catch (_) {}
+    } catch (err) { console.debug("team members load failed:", err?.message); }
   };
   useEffect(() => { load(); }, []);
 

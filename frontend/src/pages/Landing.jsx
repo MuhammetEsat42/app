@@ -61,7 +61,7 @@ export default function Landing() {
               { icon: Cpu, label: "FastAPI + AI", sub: "queue" },
               { icon: Boxes, label: "GUI Blox Connect", sub: "executes" },
             ].map((n, i) => (
-              <div key={i} className="gb-glass rounded-xl p-5 relative">
+              <div key={n.label} className="gb-glass rounded-xl p-5 relative">
                 <n.icon size={22} className="text-gb-glow mx-auto mb-2" />
                 <div className="text-sm font-semibold">{n.label}</div>
                 <div className="text-[11px] text-slate-500 font-mono mt-0.5">{n.sub}</div>
@@ -75,8 +75,8 @@ export default function Landing() {
       {/* Features */}
       <section className="max-w-6xl mx-auto px-5 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {FEATURES.map((f, i) => (
-            <div key={i} className="gb-glass rounded-xl p-6 hover:border-purple-500/40 transition-all hover:-translate-y-0.5">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="gb-glass rounded-xl p-6 hover:border-purple-500/40 transition-all hover:-translate-y-0.5">
               <div className="w-11 h-11 rounded-xl bg-purple-950/50 border border-purple-500/30 grid place-items-center mb-4">
                 <f.icon size={20} className="text-gb-glow" />
               </div>

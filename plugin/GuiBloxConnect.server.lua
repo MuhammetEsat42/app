@@ -9,6 +9,7 @@ local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local Selection = game:GetService("Selection")
 local LogService = game:GetService("LogService")
 local InsertService = game:GetService("InsertService")
+local TweenService = game:GetService("TweenService")
 
 -- ⬇️ Set this to your deployed GUI Blox backend URL
 local BASE_URL = "https://guiblox-ai.preview.emergentagent.com/api"
@@ -104,17 +105,13 @@ local function request(method: string, path: string, body: any?): any?
 			Body = body and HttpService:JSONEncode(body) or nil,
 		})
 	end)
-	if not ok then
-		return nil
-	end
-	if res.Success then
-		return HttpService:JSONDecode(res.Body)
-	end
+	if not ok then return nil end
+	if res.Success then return HttpService:JSONDecode(res.Body) end
 	return nil
 end
 
 ------------------------------------------------------------------
--- Executor Tool Suite
+-- Shared helpers
 ------------------------------------------------------------------
 local function resolveParent(pathStr: string?): Instance
 	if not pathStr or pathStr == "" then return workspace end
@@ -134,12 +131,9 @@ local function applyProperties(inst: Instance, props: {[string]: any}?)
 	for k, v in pairs(props) do
 		pcall(function()
 			if typeof(v) == "table" and #v == 3 then
-				-- interpret [r,g,b] or [x,y,z]
 				if k:find("Color") then
 					inst[k] = Color3.fromRGB(v[1], v[2], v[3])
-				elseif k == "Size" then
-					inst[k] = Vector3.new(v[1], v[2], v[3])
-				elseif k == "Position" then
+				elseif k == "Size" or k == "Position" then
 					inst[k] = Vector3.new(v[1], v[2], v[3])
 				else
 					inst[k] = v
@@ -151,6 +145,54 @@ local function applyProperties(inst: Instance, props: {[string]: any}?)
 	end
 end
 
+-- Terrain-conforming raycast (only hits Terrain)
+local function terrainRaycast(x: number, z: number, topY: number, botY: number): RaycastResult?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { workspace.Terrain }
+	return workspace:Raycast(Vector3.new(x, topY, z), Vector3.new(0, botY - topY, 0), params)
+end
+
+-- Build a procedural scattered asset at a world position (real CFrame placement)
+local function buildScatterAsset(parent: Instance, pos: Vector3, yaw: number, isTree: boolean, assetLower: string)
+	if isTree then
+		local model = Instance.new("Model")
+		model.Name = "Tree"
+		local h = 6 + math.random() * 6
+		local trunk = Instance.new("Part")
+		trunk.Anchored = true
+		trunk.Size = Vector3.new(1.2, h, 1.2)
+		trunk.CFrame = CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, yaw, 0)
+		trunk.Material = Enum.Material.Wood
+		trunk.Color = Color3.fromRGB(94, 60, 38)
+		trunk.Parent = model
+		local canopy = Instance.new("Part")
+		canopy.Anchored = true
+		canopy.Shape = Enum.PartType.Ball
+		local cs = 5 + math.random() * 3
+		canopy.Size = Vector3.new(cs, cs, cs)
+		canopy.CFrame = CFrame.new(pos + Vector3.new(0, h + cs * 0.3, 0))
+		canopy.Material = Enum.Material.Grass
+		canopy.Color = assetLower:find("sakura") and Color3.fromRGB(244, 164, 196) or Color3.fromRGB(46, 120, 54)
+		canopy.Parent = model
+		model.PrimaryPart = trunk
+		model.Parent = parent
+	else
+		local rock = Instance.new("Part")
+		rock.Anchored = true
+		local s = 1.5 + math.random() * 3
+		rock.Size = Vector3.new(s, s * 0.7, s * 0.9)
+		rock.CFrame = CFrame.new(pos + Vector3.new(0, s * 0.3, 0))
+			* CFrame.Angles(math.random() * 0.4, yaw, math.random() * 0.4)
+		rock.Material = Enum.Material.Slate
+		rock.Color = Color3.fromRGB(120, 120, 128)
+		rock.Parent = parent
+	end
+end
+
+------------------------------------------------------------------
+-- Executor Tool Suite
+------------------------------------------------------------------
 local Executors = {}
 
 function Executors.create_instance(p): (boolean, {string})
@@ -180,7 +222,6 @@ function Executors.write_script(p): (boolean, {string})
 	local s = Instance.new(classMap[p.script_type] or "Script")
 	s.Name = p.name or "GuiBloxScript"
 	local src = p.source or ""
-	-- inject task.wait() into any while true loop missing a yield
 	src = src:gsub("while%s+true%s+do", "while true do task.wait()")
 	s.Source = src
 	s.Parent = resolveParent(p.parent)
@@ -196,7 +237,6 @@ function Executors.insert_toolbox_model(p): (boolean, {string})
 		return InsertService:LoadAsset(p.asset_id)
 	end)
 	if ok and model then
-		-- scripts disabled on import
 		for _, d in ipairs(model:GetDescendants()) do
 			if d:IsA("LuaSourceContainer") then d.Disabled = true end
 		end
@@ -206,31 +246,119 @@ function Executors.insert_toolbox_model(p): (boolean, {string})
 	return false, { "Failed to insert asset" }
 end
 
+-- Procedural Perlin heightmap sculpt: real FillBlock columns
 function Executors.sculpt_terrain(p): (boolean, {string})
 	local terrain = workspace.Terrain
-	local size = p.region_size or {100, 40, 100}
-	for i, v in ipairs(size) do size[i] = math.min(v, MAX_TERRAIN) end
-	local center = p.center or {0, 0, 0}
+	local size = p.region_size or { 200, 60, 200 }
+	size[1] = math.min(size[1] or 200, MAX_TERRAIN)
+	size[2] = math.min(size[2] or 60, MAX_TERRAIN)
+	size[3] = math.min(size[3] or 200, MAX_TERRAIN)
+	local center = p.center or { 0, 0, 0 }
 	local mat = Enum.Material[p.material] or Enum.Material.Grass
-	local region = Region3.new(
-		Vector3.new(center[1] - size[1]/2, center[2] - size[2]/2, center[3] - size[3]/2),
-		Vector3.new(center[1] + size[1]/2, center[2] + size[2]/2, center[3] + size[3]/2)
-	):ExpandToGrid(4)
-	pcall(function() terrain:FillRegion(region, 4, mat) end)
-	return true, { ("Sculpted %s terrain region %dx%dx%d"):format(p.material, size[1], size[2], size[3]) }
+	local amp = p.amplitude or math.max(12, size[2] * 0.6)
+	local res = 8
+	local seed = math.random() * 1000
+	local sx, sy, sz = size[1], size[2], size[3]
+	local cx, cy, cz = center[1], center[2], center[3]
+	local baseY = cy - sy / 2
+	local cols = 0
+	local nx = math.floor(sx / res)
+	local nz = math.floor(sz / res)
+	for ix = 0, nx do
+		for iz = 0, nz do
+			local wx = cx - sx / 2 + ix * res
+			local wz = cz - sz / 2 + iz * res
+			-- layered Perlin noise for natural rolling terrain
+			local n = math.noise(wx / 60 + seed, wz / 60 + seed) * 0.6
+				+ math.noise(wx / 25 + seed, wz / 25 + seed) * 0.3
+				+ math.noise(wx / 12 + seed, wz / 12 + seed) * 0.1
+			local h = math.max(res, (n + 0.5) * amp)
+			local colCF = CFrame.new(wx, baseY + h / 2, wz)
+			pcall(function()
+				terrain:FillBlock(colCF, Vector3.new(res, h, res), mat)
+			end)
+			cols += 1
+			if cols % 200 == 0 then task.wait() end
+		end
+	end
+	return true, { ("Sculpted Perlin heightmap: %d columns %dx%dx%d, amp %.0f"):format(cols, sx, sy, sz, amp) }
 end
 
+-- Biome-aware painting: height-banded material stamps on the terrain surface
 function Executors.paint_terrain_material(p): (boolean, {string})
-	return true, { ("Painted biome '%s' with materials: %s"):format(p.biome or "", table.concat(p.materials or {}, ", ")) }
+	local terrain = workspace.Terrain
+	local mats = {}
+	for _, m in ipairs(p.materials or {}) do
+		local e = Enum.Material[m]
+		if e then table.insert(mats, e) end
+	end
+	if #mats == 0 then mats = { Enum.Material.Sand, Enum.Material.Grass, Enum.Material.Rock, Enum.Material.Snow } end
+	local size = p.region_size or { 200, 60, 200 }
+	local center = p.center or { 0, 0, 0 }
+	local sx = math.min(size[1] or 200, MAX_TERRAIN)
+	local sz = math.min(size[3] or 200, MAX_TERRAIN)
+	local sy = size[2] or 60
+	local cx, cy, cz = center[1], center[2], center[3]
+	local topY, botY = cy + sy, cy - sy
+	local res = 10
+	local painted = 0
+	for ix = 0, math.floor(sx / res) do
+		for iz = 0, math.floor(sz / res) do
+			local wx = cx - sx / 2 + ix * res
+			local wz = cz - sz / 2 + iz * res
+			local r = terrainRaycast(wx, wz, topY, botY)
+			if r then
+				local frac = math.clamp((r.Position.Y - botY) / math.max(1, (topY - botY)), 0, 1)
+				local idx = math.clamp(math.floor(frac * #mats) + 1, 1, #mats)
+				pcall(function() terrain:FillBall(r.Position, res * 0.9, mats[idx]) end)
+				painted += 1
+				if painted % 150 == 0 then task.wait() end
+			end
+		end
+	end
+	return true, { ("Painted biome '%s': %d surface stamps, %d materials"):format(p.biome or "custom", painted, #mats) }
 end
 
+-- Poisson-disk grid scatter with real CFrame placement + terrain raycast conforming
 function Executors.scatter_assets(p): (boolean, {string})
-	local count = math.min(p.count or 0, MAX_SCATTER)
-	return true, { ("Scattered %d x %s (Poisson-disk, jitter %.2f)"):format(count, p.asset or "asset", p.jitter or 0.3) }
+	local count = math.min(p.count or 50, MAX_SCATTER)
+	local size = p.region_size or { 200, 100, 200 }
+	local center = p.center or { 0, 0, 0 }
+	local sx, sz = size[1] or 200, size[3] or 200
+	local cx, cy, cz = center[1], center[2], center[3]
+	local topY, botY = cy + (size[2] or 100), cy - (size[2] or 100)
+	local jitter = p.jitter or 0.4
+	local spacing = p.min_spacing or math.max(4, math.sqrt((sx * sz) / math.max(count, 1)))
+
+	local folder = Instance.new("Folder")
+	folder.Name = "GuiBlox_Scatter_" .. tostring(p.asset or "asset")
+	folder.Parent = workspace
+
+	local assetLower = string.lower(tostring(p.asset or ""))
+	local isTree = (assetLower:find("tree") or assetLower:find("sakura") or assetLower:find("pine")) ~= nil
+	local placed = 0
+	local cols = math.max(1, math.floor(sx / spacing))
+	local rows = math.max(1, math.floor(sz / spacing))
+	for gx = 0, cols do
+		for gz = 0, rows do
+			if placed >= count then break end
+			local jx = (math.random() - 0.5) * spacing * jitter * 2
+			local jz = (math.random() - 0.5) * spacing * jitter * 2
+			local wx = cx - sx / 2 + gx * spacing + jx
+			local wz = cz - sz / 2 + gz * spacing + jz
+			local r = terrainRaycast(wx, wz, topY, botY)
+			if r then
+				buildScatterAsset(folder, r.Position, math.random() * math.pi * 2, isTree, assetLower)
+				placed += 1
+				if placed % 50 == 0 then task.wait() end
+			end
+		end
+		if placed >= count then break end
+	end
+	return true, { ("Scattered %d x %s via Poisson-grid raycast (spacing %.1f, jitter %.2f)"):format(placed, tostring(p.asset or "asset"), spacing, jitter) }
 end
 
 function Executors.create_animation(p): (boolean, {string})
-	local TweenService = game:GetService("TweenService")
 	local targets = {}
 	if p.target == "Selection" then
 		targets = Selection:Get()
@@ -296,7 +424,6 @@ Selection.SelectionChanged:Connect(function()
 	request("POST", "/bridge/context", { selection = names })
 end)
 
--- Forward runtime errors for "Fix with AI"
 LogService.MessageOut:Connect(function(message, msgType)
 	if msgType == Enum.MessageType.MessageError then
 		request("POST", "/bridge/log", { level = "error", message = message, source = "studio" })

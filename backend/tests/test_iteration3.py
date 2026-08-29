@@ -12,7 +12,8 @@ import requests
 
 from conftest import BASE_URL, new_session
 
-PASSWORD = "Test1234!"
+import os
+PASSWORD = os.getenv("TEST_PASSWORD", "Test1234!")
 ORIGIN = BASE_URL
 
 
@@ -81,7 +82,7 @@ class TestPaymentsCheckout:
         assert sd["session_id"] == sid
         assert sd["payment_status"] == "pending", sd
         assert sd["status"] == "initiated", sd
-        assert sd["granted"] is False
+        assert not sd["granted"]
         assert sd["item_id"] == "pack_2000"
         assert sd["credits"] == 2000
 
@@ -129,7 +130,7 @@ class TestTeam:
         d = r.json()
         assert d["owner"]["role"] == "owner"
         assert d["owner"]["email"] == "test@guiblox.com"
-        assert d["can_manage"] is True
+        assert d["can_manage"]
         assert isinstance(d["members"], list)
         assert all("_id" not in m for m in d["members"])
 
@@ -227,4 +228,4 @@ class TestFreePlanGate:
     def test_free_user_members_can_manage_false(self, free_user_client):
         r = free_user_client.get(f"{BASE_URL}/api/team/members", timeout=30)
         assert r.status_code == 200, r.text
-        assert r.json()["can_manage"] is False
+        assert not r.json()["can_manage"]

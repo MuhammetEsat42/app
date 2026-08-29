@@ -1,4 +1,4 @@
-"""Auth: register + mock email verification + login + JWT refresh rotation + logout."""
+"""Auth: register + real email verification (Resend) + login + JWT refresh rotation + logout."""
 import random
 from fastapi import APIRouter, HTTPException, Request, Depends
 
@@ -13,6 +13,7 @@ from anti_fraud import (is_disposable_email, verify_turnstile, ip_signup_allowed
 from audit import log_audit
 from config import FREE_SIGNUP_CREDITS
 from deps import get_current_user
+from email_service import send_verification_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -41,11 +42,12 @@ async def register(body: RegisterRequest, request: Request):
     await users.insert_one(doc)
     await log_audit(doc["id"], "register", ip, {"email": email})
 
-    # MOCK email verification — code returned in response + logged (real email later)
+    # Real verification email via Resend
+    sent = await send_verification_email(email, code)
     return {
-        "message": "Registered. Verify your email to activate 5 free credits.",
+        "message": "Registered. Check your email for the 6-digit verification code.",
         "email": email,
-        "verification_code_mock": code,  # MOCKED: shown in-UI until real email is wired
+        "email_sent": sent,
     }
 
 
@@ -69,6 +71,24 @@ async def verify_email(body: VerifyEmailRequest, request: Request):
     return await _issue_tokens(user["id"])
 
 
+@router.post("/resend-code")
+async def resend_code(body: LoginRequest, request: Request):
+    """Recovery: re-issue a fresh verification code by email if delivery failed."""
+    user = await users.find_one({"email": body.email.lower()})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_secret(user["password_hash"], body.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified")
+    code = f"{random.randint(0, 999999):06d}"
+    await users.update_one({"id": user["id"]}, {"$set": {"verification_code": code}})
+    sent = await send_verification_email(user["email"], code)
+    await log_audit(user["id"], "resend_code", client_ip(request))
+    return {"message": "A new code was emailed.", "email": user["email"], "email_sent": sent}
+
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, request: Request):
     user = await users.find_one({"email": body.email.lower()})
@@ -80,14 +100,19 @@ async def login(body: LoginRequest, request: Request):
     return await _issue_tokens(user["id"])
 
 
-@router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshRequest):
+def _decode_refresh_token(token: str) -> dict:
     try:
-        payload = decode_token(body.refresh_token)
+        payload = decode_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     if payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Not a refresh token")
+    return payload
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(body: RefreshRequest):
+    payload = _decode_refresh_token(body.refresh_token)
     jti = payload.get("jti")
     stored = await sessions.find_one({"jti": jti, "user_id": payload["sub"]})
     if not stored or stored.get("revoked"):
@@ -103,6 +128,7 @@ async def logout(body: RefreshRequest, user: dict = Depends(get_current_user)):
         payload = decode_token(body.refresh_token)
         await sessions.update_one({"jti": payload.get("jti")}, {"$set": {"revoked": True}})
     except Exception:
+        # Already-invalid token: logout is idempotent, nothing to revoke.
         pass
     return {"message": "Logged out"}
 

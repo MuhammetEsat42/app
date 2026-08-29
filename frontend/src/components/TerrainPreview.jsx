@@ -46,7 +46,7 @@ export default function TerrainPreview({ ops }) {
              style={{ transformStyle: "preserve-3d", transform: "translate(-50%,-50%) rotateX(58deg) rotateZ(0deg)" }}>
           {/* Voxel biome layers */}
           {colors.map((c, i) => (
-            <div key={i} className="absolute rounded-sm"
+            <div key={`layer-${c}-${i}`} className="absolute rounded-sm"
                  style={{
                    width: 120, height: 120, left: -60, top: -60,
                    background: c, opacity: 0.9 - i * 0.12,
@@ -58,7 +58,7 @@ export default function TerrainPreview({ ops }) {
           {/* Scatter dots on top layer */}
           <div className="absolute" style={{ width: 120, height: 120, left: -60, top: -60, transform: `translateZ(${colors.length * 10 + 2}px)` }}>
             {dots.map((d, i) => (
-              <span key={i} className="absolute rounded-full"
+              <span key={`dot-${i}`} className="absolute rounded-full"
                     style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.s, height: d.s,
                              background: biome === "desert" ? "#a16207" : "#0f4d24",
                              boxShadow: "0 0 3px rgba(0,0,0,0.6)" }} />

@@ -27,7 +27,9 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry && TOKENS.refresh) {
+    const status = error.response?.status;
+
+    if (status === 401 && !original._retry && TOKENS.refresh) {
       original._retry = true;
       try {
         refreshing = refreshing || axios.post(`${API}/auth/refresh`, { refresh_token: TOKENS.refresh });
@@ -38,10 +40,21 @@ api.interceptors.response.use(
         return api(original);
       } catch (e) {
         refreshing = null;
+        console.debug("Token refresh failed, redirecting to login:", e?.message);
         TOKENS.clear();
         window.location.href = "/login";
       }
     }
+
+    // Transient rate limit: honor Retry-After (capped) and retry once.
+    if (status === 429 && original && !original._retried429) {
+      original._retried429 = true;
+      const retryAfter = parseInt(error.response?.headers?.["retry-after"] || "1", 10);
+      const waitMs = Math.min(Math.max(retryAfter, 1), 3) * 1000;
+      await new Promise((r) => setTimeout(r, waitMs));
+      return api(original);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -70,7 +83,8 @@ export async function streamPrompt(body, onEvent, signal) {
     for (const part of parts) {
       const line = part.trim();
       if (line.startsWith("data:")) {
-        try { onEvent(JSON.parse(line.slice(5).trim())); } catch (_) {}
+        try { onEvent(JSON.parse(line.slice(5).trim())); }
+        catch (err) { console.debug("SSE parse skipped:", err?.message); }
       }
     }
   }

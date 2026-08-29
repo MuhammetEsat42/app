@@ -33,30 +33,29 @@ async def prompt(body: PromptRequest, user: dict = Depends(get_verified_user)):
     )
 
 
+def _estimate_rules():
+    c = CREDIT_COST
+    return [
+        (["map", "terrain", "sculpt", "biome", "mountain", "island"],
+         c["sculpt_terrain"] + c["paint_terrain_material"], "terrain generation"),
+        (["scatter", "trees", "rocks", "forest", "sakura", "gravel"], c["scatter_assets"], "asset scatter"),
+        (["script", "code", "module", "system", "logic"], c["write_script"], "Luau script"),
+        (["gui", "ui", "menu", "hud", "button", "frame"], c["create_instance"] * 3, "UI build"),
+        (["find", "search", "toolbox", "asset", "model"], c["search_toolbox"], "toolbox search"),
+        (["animate", "animation", "tween", "pulse", "rotate", "spin", "fade", "bounce"],
+         c["create_animation"], "animation"),
+    ]
+
+
 @router.post("/estimate")
 async def estimate(body: PromptRequest, user: dict = Depends(get_verified_user)):
     """Rough heuristic credit estimate for the cost-preview UI (pre-run)."""
     text = body.prompt.lower()
-    est = 1
-    hints = []
-    if any(w in text for w in ["map", "terrain", "sculpt", "biome", "mountain", "island"]):
-        est += CREDIT_COST["sculpt_terrain"] + CREDIT_COST["paint_terrain_material"]
-        hints.append("terrain generation")
-    if any(w in text for w in ["scatter", "trees", "rocks", "forest", "sakura", "gravel"]):
-        est += CREDIT_COST["scatter_assets"]
-        hints.append("asset scatter")
-    if any(w in text for w in ["script", "code", "module", "system", "logic"]):
-        est += CREDIT_COST["write_script"]
-        hints.append("Luau script")
-    if any(w in text for w in ["gui", "ui", "menu", "hud", "button", "frame"]):
-        est += CREDIT_COST["create_instance"] * 3
-        hints.append("UI build")
-    if any(w in text for w in ["find", "search", "toolbox", "asset", "model"]):
-        est += CREDIT_COST["search_toolbox"]
-        hints.append("toolbox search")
-    if any(w in text for w in ["animate", "animation", "tween", "pulse", "rotate", "spin", "fade", "bounce"]):
-        est += CREDIT_COST["create_animation"]
-        hints.append("animation")
+    est, hints = 1, []
+    for keywords, cost, hint in _estimate_rules():
+        if any(w in text for w in keywords):
+            est += cost
+            hints.append(hint)
     return {"estimate": est, "hints": hints, "credits": user.get("credits", 0)}
 
 

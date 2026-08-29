@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }) {
       try {
         const { data } = await api.get("/workspace/bridge-state");
         if (alive) setStudio(data.connected);
-      } catch (_) {}
+      } catch (err) { console.debug("bridge-state poll failed:", err?.message); }
     };
     poll();
     const t = setInterval(poll, 4000);

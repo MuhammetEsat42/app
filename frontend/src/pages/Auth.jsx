@@ -20,7 +20,7 @@ export default function Auth({ mode }) {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("form"); // form | verify
   const [code, setCode] = useState("");
-  const [mockCode, setMockCode] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
   const [captchaOk, setCaptchaOk] = useState(false);
 
   useEffect(() => {
@@ -44,9 +44,9 @@ export default function Auth({ mode }) {
       const { data } = await api.post("/auth/register", {
         email, password, fingerprint: fp, turnstile_token: "mock-turnstile-token",
       });
-      setMockCode(data.verification_code_mock || "");
+      setEmailSent(!!data.email_sent);
       setStep("verify");
-      toast.success("Account created. Verify your email to unlock 5 credits.");
+      toast.success("Account created. Check your email for the code.");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Registration failed");
     } finally { setLoading(false); }
@@ -63,6 +63,17 @@ export default function Auth({ mode }) {
       toast.error(e.response?.data?.detail || "Verification failed");
     } finally { setLoading(false); }
   };
+
+  const doResend = async () => {
+    try {
+      const { data } = await api.post("/auth/resend-code", { email, password });
+      setEmailSent(!!data.email_sent);
+      toast.success(data.email_sent ? "New code emailed." : "Code regenerated (check delivery).");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Could not resend");
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gb-bg flex">
@@ -178,9 +189,13 @@ export default function Auth({ mode }) {
               <p className="text-sm text-slate-400 mt-1 mb-4">
                 Enter the 6-digit code sent to <span className="text-slate-200">{email}</span>.
               </p>
-              {mockCode && (
-                <div className="mb-4 p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-300 font-mono">
-                  MOCK EMAIL — your code is <span className="font-bold text-amber-200 text-sm">{mockCode}</span>
+              {emailSent ? (
+                <div className="mb-4 p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300">
+                  A 6-digit code was emailed to <span className="font-semibold">{email}</span>. Check your inbox (and spam).
+                </div>
+              ) : (
+                <div className="mb-4 p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-300">
+                  We couldn't confirm the email delivery. If it doesn't arrive, contact support.
                 </div>
               )}
               <Input data-testid="verify-code-input" value={code}
@@ -190,6 +205,10 @@ export default function Auth({ mode }) {
                       className="w-full mt-4 bg-gb-violet hover:bg-gb-hover text-white font-semibold h-11 rounded-xl">
                 {loading ? <Loader2 className="animate-spin" size={18} /> : "Verify & activate credits"}
               </Button>
+              <button data-testid="resend-code-btn" onClick={doResend}
+                      className="w-full mt-3 text-xs text-gb-glow hover:underline">
+                Didn't get it? Resend code
+              </button>
             </div>
           )}
         </div>

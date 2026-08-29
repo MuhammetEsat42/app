@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { api, TOKENS } from "@/lib/api";
 
 const AuthContext = createContext(null);
@@ -13,8 +13,15 @@ export function AuthProvider({ children }) {
       const { data } = await api.get("/auth/me");
       setUser(data);
       return data;
-    } catch (e) {
-      setUser(null);
+    } catch (err) {
+      const status = err?.response?.status;
+      // Only treat a real auth failure as logged-out. 429/5xx/network are transient
+      // and must NOT boot a user who still holds valid tokens.
+      if (status === 401 || status === 403) {
+        setUser(null);
+        return null;
+      }
+      console.warn("refreshUser transient error, keeping session:", status || err?.message);
       return null;
     }
   }, []);
@@ -26,27 +33,30 @@ export function AuthProvider({ children }) {
     })();
   }, [refreshUser]);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
     TOKENS.set(data.access_token, data.refresh_token);
     return await refreshUser();
-  };
+  }, [refreshUser]);
 
-  const setTokens = async (data) => {
+  const setTokens = useCallback(async (data) => {
     TOKENS.set(data.access_token, data.refresh_token);
     return await refreshUser();
-  };
+  }, [refreshUser]);
 
-  const logout = async () => {
-    try { await api.post("/auth/logout", { refresh_token: TOKENS.refresh }); } catch (_) {}
+  const logout = useCallback(async () => {
+    try { await api.post("/auth/logout", { refresh_token: TOKENS.refresh }); }
+    catch (err) { console.debug("Logout request failed (token likely already invalid):", err); }
     TOKENS.clear();
     setUser(null);
     window.location.href = "/login";
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, logout, setTokens, refreshUser, setUser }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, loading, login, logout, setTokens, refreshUser, setUser }),
+    [user, loading, login, logout, setTokens, refreshUser]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
